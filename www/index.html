@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Salt Console</title>
+<link rel="stylesheet" href="app.css?v=1.0.0">
+</head>
+<body>
+<div id="login" hidden>
+  <form id="loginForm" class="login-card" autocomplete="on">
+    <div class="login-brand"><span class="mark">S</span> Lab Salt Console</div>
+    <p class="muted">Open source Salt, through salt-api (PAM)</p>
+    <label>User name<input name="username" autocomplete="username" required></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+    <div id="loginErr" class="alert" hidden></div>
+    <button class="btn btn-primary" type="submit">Log in</button>
+  </form>
+</div>
+<div id="app" hidden>
+  <header class="hdr">
+    <a class="brand" href="#/dashboard"><span class="mark">S</span> Lab Salt Console</a>
+    <div class="hdr-right"><span id="who"></span><button class="link-btn" data-act="logout">Log out</button></div>
+  </header>
+  <div class="shell">
+    <nav class="nav" aria-label="Main">
+      <a href="#/dashboard">Dashboard</a>
+      <a href="#/targets">Targets</a>
+      <details open><summary>Minion Keys</summary>
+        <a href="#/keys/minions">Accepted</a>
+        <a href="#/keys/minions_pre">Pending <span id="pendingBadge" class="badge" hidden></span></a>
+        <a href="#/keys/minions_rejected">Rejected</a>
+        <a href="#/keys/minions_denied">Denied</a>
+      </details>
+      <details open><summary>Activity</summary>
+        <a href="#/activity/completed">Completed</a>
+        <a href="#/activity/active">In Progress</a>
+      </details>
+      <details open><summary>Config</summary>
+        <a href="#/jobs">Jobs</a>
+        <a href="#/schedules">Schedules</a>
+        <a href="#/pillars">Pillars</a>
+        <a href="#/files">File Server</a>
+        <a href="#/highstate">Highstate</a>
+      </details>
+      <div class="nav-foot" id="ver"></div>
+    </nav>
+    <main id="main"></main>
+  </div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<script src="app.js?v=1.0.0"></script>
+</body>
+</html>
