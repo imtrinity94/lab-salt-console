@@ -1,7 +1,7 @@
 #!/bin/bash
 # tools/release.sh <version>
 # Sets the version, rebuilds the script list in index.html from tools/scripts.txt, merges CHANGELOG.new,
-# runs the syntax and smoke checks (sample data and live; live needs API_PW), then commits and tags.
+# runs the syntax and smoke checks (sample data and live; live needs API_PW), then commits, tags and pushes to origin.
 set -eo pipefail
 V="$1"
 cd /opt/salt-ui
@@ -28,4 +28,7 @@ API_PW="$API_PW" node test/smoke.js 2>&1 | grep -v -e NODE_TLS -e trace-warnings
 git add -A
 git commit -q -m "Lab Salt Console $V"
 git tag "v$V"
+if git remote get-url origin >/dev/null 2>&1; then
+  git push origin main && git push origin "v$V" || echo "WARNING: release v$V committed and tagged locally, but the push to origin failed"
+fi
 git log --oneline | head -n 3

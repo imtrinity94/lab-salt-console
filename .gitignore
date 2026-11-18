@@ -1,0 +1,6 @@
+# Local release scratch file, merged into CHANGELOG.md by tools/release.sh
+CHANGELOG.new
+# Generated on the master, not part of the console
+www/banner.json
+node_modules/
+*.log
