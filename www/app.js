@@ -1,6 +1,6 @@
 'use strict';
 // Lab Salt Console - single page UI on open source salt-api (rest_cherrypy).
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -168,11 +168,10 @@ async function pgKeys(kind) {
   const btn = (op, label, show) => show ? `<button class="btn needs-sel" disabled data-act="keyop" data-op="${op}">${label}</button>` : '';
   return `<h1>${def[1]}</h1><h2 style="margin-top:0">${plural(ids.length, 'minion')}</h2><div class="bar"><span class="grp">${btn('accept', 'Accept Key', def[0] !== 'minions')}${btn('reject', 'Reject Key', def[0] === 'minions' || def[0] === 'minions_pre')}${btn('delete', 'Delete Key', true)}</span></div>` +
     table([
-      { t: '', f: r => `<input type="checkbox" class="sel" value="${esc(r)}" aria-label="Select ${esc(r)}">` },
       { t: 'Master', f: () => esc(location.hostname) },
       { t: 'Minion ID', f: r => esc(r) },
       { t: 'Key state', f: () => `<span class="pill ${def[2]}">${def[1]}</span>` }
-    ], ids);
+    ], ids, null, { key: 'keys', select: r => r });
 }
 
 async function pgActivity(kind) {

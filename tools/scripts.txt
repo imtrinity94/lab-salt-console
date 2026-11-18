@@ -2,4 +2,6 @@ app.js
 grid.js
 demo.js
 shell.js
+highstate.js
+targets.js
 boot.js

@@ -1,1 +1,1 @@
-[["keys","minions_pre"],["activity","active"],["pillars","file:"],["files","lab%2Fmotd.sls"],["highstate","minions"],["highstate","activity"]]
+[["keys","minions_pre"],["activity","active"],["pillars","file:"],["files","lab%2Fmotd.sls"],["highstate","minions"],["highstate","activity"],["highstate","state:lab_motd%7Clab.motd"],["targets","All%20Minions/highstate"],["targets","All%20Minions/activity"],["targets","All%20Minions/edit"]]

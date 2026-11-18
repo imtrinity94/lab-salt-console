@@ -1,5 +1,13 @@
 # Changelog - Lab Salt Console
 
+## 1.2.0 - 2026-11-18
+
+- Target page: breadcrumb, ACTIONS menu, minion count and Minions / Highstate / Activity / Edit tabs for each target.
+- Row actions on minion tables: checkbox column, three-dot row menu and expandable details; Run Highstate / Run Job / Run Command act on the ticked rows when any are selected.
+- Highstate: Limit by (all time, 24 hours, 7 days, 30 days), results merged from up to 15 highstate jobs with the newest result per minion, JID columns, Activity tab with status and Success / Failed / Not Returned counts, and the minions with changes vs no changes trend chart.
+- Minion Keys uses the grid selection, so ticks survive sorting and filtering.
+- Master: job results are now kept for 30 days (keep_jobs_seconds).
+
 ## 1.1.0 - 2026-11-18
 
 - Datagrid behaviour on every table: sortable columns, per-column filters, Clear Filters, items per page with paging, show/hide columns.
