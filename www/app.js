@@ -1,6 +1,6 @@
 'use strict';
 // Lab Salt Console - single page UI on open source salt-api (rest_cherrypy).
-const VERSION = '1.3.0';
+const VERSION = '1.3.1';
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,7 +27,7 @@ async function raw(path, body) {
     logout();
     throw new Error('Session expired. Log in again.');
   }
-  if (!r.ok) throw new Error('salt-api returned HTTP ' + r.status);
+  if (!r.ok) throw new Error('salt-api returned HTTP ' + r.status + (Array.isArray(body) && body[0] ? ' for ' + body[0].fun : ''));
   const j = await r.json();
   return j.return[0];
 }

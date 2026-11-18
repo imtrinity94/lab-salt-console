@@ -1,5 +1,11 @@
 # Changelog - Lab Salt Console
 
+## 1.3.1 - 2026-11-18
+
+- Speed: finished job results are cached for the life of the page, and the screens that read many job results read fewer of them (Activity > Completed status for the 15 most recent jobs, Highstate from up to 10 highstate jobs, minion Activity from the 15 most recent jobs). A runner call takes most of a second on the lab master, so the earlier limits made these pages slow.
+- Reliability: read-only calls of any kind are retried once after an HTTP 500, and error messages now name the Salt function that failed.
+- Reports: count column header now reads Minions / Keys.
+
 ## 1.3.0 - 2026-11-18
 
 - Reports: Key State, Minion version, OS version and Salt master version, each with a chart, a filterable table and CSV / JSON download; version reports can be limited to a target.

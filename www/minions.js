@@ -2,7 +2,7 @@
 // minions.js - Minions workspace (list and minion page) and Reports.
 addNav(null, '#/reports', 'Reports', 'Dashboard');
 addNav(null, '#/minions', 'Minions', 'Targets');
-const MIN_ACT_JOBS = 30;
+const MIN_ACT_JOBS = 15;
 const osName = g => ((g.os || '') + ' ' + (g.osrelease || '')).trim();
 const presencePill = up => up ? '<span class="pill ok">Present</span>' : '<span class="pill bad">Not responding</span>';
 // /var/run/reboot-required is how Debian and Ubuntu flag a pending reboot; other OS families are shown as not checked.
@@ -39,7 +39,7 @@ async function minionPage(arg) {
   let body;
   if (tab === 'activity') {
     const jobs = jobList(await runner('jobs.list_jobs')).slice(0, MIN_ACT_JOBS);
-    const dets = await Promise.all(jobs.map(j => runner('jobs.list_job', { jid: j.jid }).catch(() => null)));
+    const dets = await Promise.all(jobs.map(j => jobDetail(j.jid).catch(() => null)));
     const rows = jobs.map((j, i) => ({ j: j, det: dets[i] })).filter(x => x.det && ((x.det.Minions || []).indexOf(id) >= 0 || (x.det.Result && id in x.det.Result)));
     const st = x => { const r = (x.det.Result || {})[id]; return !r ? '<span class="pill warn">Not returned</span>' : (r.success === false || r.retcode > 0) ? '<span class="pill bad">Failed</span>' : '<span class="pill ok">Succeeded</span>'; };
     body = `<p class="muted">Jobs that included this minion, out of the ${MIN_ACT_JOBS} most recent jobs on the master.</p>` + table([
@@ -89,7 +89,7 @@ routes.reports = async function (arg) {
     `<div class="bar">${scoped ? `<label class="inl">Target: <select data-change="reporttgt" aria-label="Target">${all.map(t => `<option${t === cur ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}<span class="spacer"></span><button class="btn" data-act="dlreport" data-fmt="csv">Download CSV</button><button class="btn" data-act="dlreport" data-fmt="json">Download JSON</button></div>` +
     (scoped ? `<p class="muted">Counts the minions that answered just now (${plural(total, 'minion')}).</p>` : '') +
     `<div class="card">${rows.map(r => `<div class="hrow"><span class="hl">${esc(r.label)}</span><span class="hbar"><i style="width:${(r.count / max * 100).toFixed(1)}%"></i></span><span class="hn">${r.count}</span></div>`).join('') || '<span class="muted">No data.</span>'}</div>` +
-    table([{ t: first, f: r => esc(r.label) }].concat(type === 'masterver' ? [{ t: 'Master', f: r => esc(r.extra) }] : [{ t: plural(2, unit).slice(2), f: r => r.count }, { t: 'Share', f: r => pct(r.count, total) + '%' }]), rows, null, { key: 'report-' + type }) + `</div></div>`;
+    table([{ t: first, f: r => esc(r.label) }].concat(type === 'masterver' ? [{ t: 'Master', f: r => esc(r.extra) }] : [{ t: unit.charAt(0).toUpperCase() + unit.slice(1) + 's', f: r => r.count }, { t: 'Share', f: r => pct(r.count, total) + '%' }]), rows, null, { key: 'report-' + type }) + `</div></div>`;
 };
 acts.reporttgt = v => { store.set('reportTarget', v); route(); };
 acts.dlreport = d => {

@@ -1,7 +1,7 @@
 'use strict';
 // jobs.js - Jobs workspace with the full job definition (salt and salt-run), job page extras (download, stop),
 // and status with Success / Failed / Not Returned counts on Activity > Completed.
-const ACT_STATUS_JOBS = 40;
+const ACT_STATUS_JOBS = 15;
 // Hide only the console's own housekeeping calls; salt-run jobs started by a person stay visible.
 jobList = function (o) {
   return Object.keys(o || {}).map(j => Object.assign({ jid: j }, o[j]))
@@ -141,7 +141,7 @@ acts.stopjob = d => {
 routes.activity = async function (kind) {
   if (kind === 'active') return pgActivity('active');
   const jobs = jobList(await runner('jobs.list_jobs')).slice(0, 300);
-  const dets = await Promise.all(jobs.slice(0, ACT_STATUS_JOBS).map(j => runner('jobs.list_job', { jid: j.jid }).catch(() => null)));
+  const dets = await Promise.all(jobs.slice(0, ACT_STATUS_JOBS).map(j => jobDetail(j.jid).catch(() => null)));
   jobs.forEach((j, i) => { j.c = dets[i] ? jobCounts(dets[i]) : null; });
   const n = (r, k) => r.c ? r.c[k] : '';
   return `<h1>Completed</h1><div class="bar"><button class="btn btn-primary" data-act="runcmd">Run Command</button><button class="btn" data-act="refresh">Refresh</button></div>` +

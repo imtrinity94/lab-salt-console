@@ -2,7 +2,7 @@
 // highstate.js - Highstate workspace built on the master's job cache: Limit by, States / Minions / Activity tabs,
 // trend chart and state drill-down. hsCollect() and hsMinionsView() are reused for a single target (targets.js).
 const HS_LIMITS = [['all', 'All time', 0], ['24h', 'Last 24 hours', 1], ['7d', 'Last 7 days', 7], ['30d', 'Last 30 days', 30]];
-const HS_MAX_JOBS = 15;
+const HS_MAX_JOBS = 10;
 // A JID is the master's clock at submit time (yyyymmddhhmmss...). The lab master runs in UTC.
 const jidTime = j => Date.UTC(+j.slice(0, 4), +j.slice(4, 6) - 1, +j.slice(6, 8), +j.slice(8, 10), +j.slice(10, 12), +j.slice(12, 14));
 
@@ -11,7 +11,7 @@ async function hsCollect(ids) {
   const since = lim[2] ? Date.now() - lim[2] * 864e5 : 0;
   const all = jobList(await runner('jobs.list_jobs')).filter(isHs).filter(j => jidTime(j.jid) >= since);
   const jobs = all.slice(0, HS_MAX_JOBS);
-  const dets = await Promise.all(jobs.map(j => runner('jobs.list_job', { jid: j.jid })));
+  const dets = await Promise.all(jobs.map(j => jobDetail(j.jid)));
   const inScope = m => !ids || ids.indexOf(m) >= 0;
   const S = {}, M = {}, errs = [], perJob = [];
   dets.forEach((det, n) => {
