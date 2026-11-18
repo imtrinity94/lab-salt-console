@@ -1,6 +1,6 @@
 'use strict';
 // Lab Salt Console - single page UI on open source salt-api (rest_cherrypy).
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -506,4 +506,3 @@ $('#loginForm').addEventListener('submit', async e => {
 });
 window.addEventListener('hashchange', route);
 $('#ver').textContent = 'Lab Salt Console ' + VERSION;
-route();
