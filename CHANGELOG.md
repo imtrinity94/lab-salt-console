@@ -1,5 +1,15 @@
 # Changelog - Lab Salt Console
 
+## 1.3.0 - 2026-11-18
+
+- Reports: Key State, Minion version, OS version and Salt master version, each with a chart, a filterable table and CSV / JSON download; version reports can be limited to a target.
+- Minions workspace: list of all accepted minions with presence and a Needs Reboot flag (Debian and Ubuntu), and a page per minion with Details, Grains, Pillar, Packages, Activity and Targets tabs.
+- Jobs: full job definition (name, description, salt or salt-run, target, function, environment, states, one argument per line, pillar override, run as test), edit and delete; salt-run jobs are submitted to the master and shown in Activity.
+- Activity: Completed shows status with Success / Failed / Not Returned for the 40 most recent jobs; the job page can download the return as JSON and stop a running job.
+- File Server and Pillar files: saltenv selector, rename and delete.
+- Settings: light / dark theme, automatic logout, default items per page, and a login banner stored on the master.
+- Reliability: runner and wheel calls to salt-api are now sent one at a time and read-only ones retried once, because concurrent runner calls can fail inside salt-api with HTTP 500. The release script now stops when a smoke test fails.
+
 ## 1.2.0 - 2026-11-18
 
 - Target page: breadcrumb, ACTIONS menu, minion count and Minions / Highstate / Activity / Edit tabs for each target.

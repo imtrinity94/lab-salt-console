@@ -74,7 +74,7 @@ if (DEMO) (function () {
     if (path === '/login') return { token: 'demo', user: 'demo' };
     const low = body[0], fn = DEMO_FX[low.fun];
     let r;
-    if (low.client === 'local_async') r = { jid: job(jidAt(0, 12, 0).slice(0, 12) + two(new Date().getSeconds()) + '000001', low.fun, low.arg || [], low.tgt, 'demo', low.tgt_type), minions: match(low) };
+    if (/_async$/.test(low.client)) r = { jid: job(jidAt(0, 12, 0).slice(0, 12) + two(new Date().getSeconds()) + '000001', low.fun, low.arg || [], low.tgt, 'demo', low.tgt_type), minions: match(low) };
     else if (fn) r = fn(low);
     else r = low.client === 'local' ? each(low, () => true) : {};
     return low.client === 'wheel' ? { tag: 'demo', data: { return: r, success: true } } : r;

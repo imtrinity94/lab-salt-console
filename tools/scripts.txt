@@ -1,7 +1,11 @@
 app.js
+net.js
 grid.js
 demo.js
 shell.js
 highstate.js
 targets.js
+jobs.js
+minions.js
+settings.js
 boot.js

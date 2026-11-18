@@ -2,7 +2,7 @@
 # tools/release.sh <version>
 # Sets the version, rebuilds the script list in index.html from tools/scripts.txt, merges CHANGELOG.new,
 # runs the syntax and smoke checks (sample data and live; live needs API_PW), then commits and tags.
-set -e
+set -eo pipefail
 V="$1"
 cd /opt/salt-ui
 sed -i "s/^const VERSION = '.*';/const VERSION = '$V';/" www/app.js
