@@ -64,7 +64,7 @@ routes.jobs = async function (arg) {
       `<label class="chk"><input type="checkbox" name="test"${j.test ? ' checked' : ''}> Run as test (dry run, state functions only)</label>` +
       `<div class="bar"><button class="btn btn-primary" data-act="savejob" data-i="${i}">Save</button><a class="btn" href="#/jobs">Cancel</a></div></div>`;
   }
-  return `<h1>Jobs</h1><p class="muted">Saved job definitions. They are kept in this browser until the console gets its own storage on the master.</p><div class="bar"><a class="btn btn-primary" href="#/jobs/new">Create Job</a></div>` +
+  return `<h1>Jobs</h1><p class="muted">Saved job definitions, stored on the master and shared by everyone who uses this console.</p><div class="bar"><a class="btn btn-primary" href="#/jobs/new">Create Job</a></div>` +
     table([
       { t: 'Job', f: r => `<a href="#/jobs/edit:${jobs.indexOf(r)}">${esc(r.name)}</a>` },
       { t: 'Description', f: r => esc(r.desc) },
@@ -143,11 +143,13 @@ routes.activity = async function (kind) {
   const jobs = jobList(await runner('jobs.list_jobs')).slice(0, 300);
   const dets = await Promise.all(jobs.slice(0, ACT_STATUS_JOBS).map(j => jobDetail(j.jid).catch(() => null)));
   jobs.forEach((j, i) => { j.c = dets[i] ? jobCounts(dets[i]) : null; });
+  const og = typeof jobOrigins === 'function' ? await jobOrigins(jobs.map(j => j.jid)) : {};
   const n = (r, k) => r.c ? r.c[k] : '';
   return `<h1>Completed</h1><div class="bar"><button class="btn btn-primary" data-act="runcmd">Run Command</button><button class="btn" data-act="refresh">Refresh</button></div>` +
     (jobs.length > ACT_STATUS_JOBS ? `<p class="muted">Status and counts are read for the ${ACT_STATUS_JOBS} most recent jobs; open an older job to see its result.</p>` : '') +
     table([
       { t: 'Status', f: r => r.c ? jobStatus(r.c) : '' },
+      { t: 'Origin', f: r => og[r.jid] ? 'Schedule: ' + esc(og[r.jid]) : 'Ad-Hoc' },
       { t: 'Function', f: r => esc(r.Function) },
       { t: 'Arguments', f: r => esc((r.Arguments || []).length ? JSON.stringify(r.Arguments) : '') },
       { t: 'Target', f: r => esc(fmtTgt(r.Target)) },

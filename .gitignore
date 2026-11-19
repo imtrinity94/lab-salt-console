@@ -4,3 +4,5 @@ CHANGELOG.new
 www/banner.json
 node_modules/
 *.log
+# Python bytecode from the console service checks
+__pycache__/

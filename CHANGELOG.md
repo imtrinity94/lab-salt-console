@@ -1,5 +1,19 @@
 # Changelog - Lab Salt Console
 
+## 1.4.0 - 2026-11-19
+
+- Console service on the master (server/console_api.py, systemd unit salt-console, one SQLite file in /var/lib/salt-console). It listens on the Salt event bus, keeps the console's shared data and runs schedules. Install or update it with sudo bash tools/install-server.sh.
+- Login: the one login form now signs in to salt-api and to the console service, which checks the same PAM credentials and issues a Salt eauth token.
+- Saved targets and saved jobs are stored on the master and shared by every browser; lists saved in a browser before 1.4.0 are moved to the master on first login. Writes are version checked, so a change made from another browser is not silently overwritten.
+- Presence: Present / Disconnected / Unknown from the master's presence events (presence_events: True) and job returns, with a shared expiration setting (default 300 seconds) under Settings > Console Service.
+- Schedules: console schedules (Recurring, Once, Cron in the schedule's own time zone) that run saved jobs, with Run Now, enable / disable, edit and delete; runs that come due while the service is down are skipped and recorded, never run late. Minion-side schedules stay under a second tab.
+- Activity: Upcoming lists schedule runs due in the next 7 days; Completed has an Origin column (Schedule: name, or Ad-Hoc).
+- Dashboard: Salt events, minion presence and job outcomes (succeeded, failed, missed returns, in progress) over 1 to 24 hours, with CSV / JSON download.
+- Notifications bell: failed jobs, new pending minion keys, minions that disconnect, schedules that could not run; mark one or all as read.
+- Administration > Audit Log: jobs and runner / wheel calls with the Salt user, plus console changes, kept 90 days.
+- Compliance appears in the navigation marked Coming soon.
+- Tests: test/api_test.py checks the service end to end (auth, version conflicts, schedule validation and time zones, Run Now for minion and salt-run jobs, origins, audit, metrics) and removes everything it creates; tools/release.sh runs it.
+
 ## 1.3.1 - 2026-11-18
 
 - Speed: finished job results are cached for the life of the page, and the screens that read many job results read fewer of them (Activity > Completed status for the 15 most recent jobs, Highstate from up to 10 highstate jobs, minion Activity from the 15 most recent jobs). A runner call takes most of a second on the lab master, so the earlier limits made these pages slow.

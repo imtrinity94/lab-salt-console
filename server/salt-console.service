@@ -1,0 +1,16 @@
+[Unit]
+Description=Lab Salt Console service (event store, schedules, shared console data)
+After=network-online.target salt-master.service
+Wants=salt-master.service
+
+[Service]
+Type=simple
+ExecStart=/opt/saltstack/salt/bin/python3.11 /opt/salt-ui/server/console_api.py
+Environment=PYTHONUNBUFFERED=1
+Environment=CONSOLE_DB=/var/lib/salt-console/console.db
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

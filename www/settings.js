@@ -27,7 +27,7 @@ async function loadBanner() {
 })();
 
 routes.settings = async function (arg) {
-  const t = tabs([['#/settings', 'User Preferences', arg !== 'banner'], ['#/settings/banner', 'Login Banner', arg === 'banner']]);
+  const t = tabs([['#/settings', 'User Preferences', !arg], ['#/settings/banner', 'Login Banner', arg === 'banner'], ['#/settings/service', 'Console Service', arg === 'service']]);
   if (arg === 'banner') {
     const b = (await loadBanner()) || { enabled: false, style: 'info', message: '' };
     return `<h1>Settings</h1>${t}<div id="bannerForm" style="max-width:560px"><p class="muted">Shown on the login page to everyone who opens this console. Stored on the master in ${BANNER_PATH}.</p>` +

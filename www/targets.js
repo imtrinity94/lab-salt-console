@@ -27,7 +27,7 @@ routes.targets = async function (arg) {
     body = `<div class="bar">${hsSplit(d)}<span class="spacer"></span><button class="btn" data-act="newtarget">Create Target</button></div>` +
       table([
         { t: 'Minion ID', f: r => esc(r.id) },
-        { t: 'Presence', f: r => r.up ? '<span class="pill ok">Present</span>' : '<span class="pill bad">Not responding</span>' },
+        { t: 'Presence', f: r => presencePill(r.up, r.id) },
         { t: 'OS', f: r => esc(((r.g.os || '') + ' ' + (r.g.osrelease || '')).trim()) },
         { t: 'Salt version', f: r => esc(r.g.saltversion) },
         { t: 'IP address', f: r => esc((r.g.ipv4 || []).filter(i => i !== '127.0.0.1').join(', ')) },

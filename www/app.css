@@ -190,3 +190,22 @@ body.dark .alert{background:#4a1f18;border-color:#f35e44;color:#ffd5cd}
 body.dark .toast{background:#22343c;color:#e9ecef}
 body.dark .login-card,body.dark .login-card label{background:#fff;color:#454545}
 body.dark .login-card input{background:#fff;color:#1b1b1b;border-color:#b3b3b3}
+/* 1.4.0: console service - notifications, dashboard charts, presence, coming soon tag */
+.hb{position:relative}
+.bcount{position:absolute;top:3px;right:6px;min-width:16px;height:16px;line-height:16px;border-radius:8px;background:#c27b00;color:#fff;font-size:10px;font-weight:600;padding:0 4px;text-align:center}
+.notes{width:380px;max-height:440px;overflow:auto;padding:0}
+.nhead{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #ddd;font-size:13px}
+.nitem{display:flex !important;flex-direction:column;gap:2px;border-bottom:1px solid #eee !important;white-space:normal}
+.nitem small{color:#8c8c8c;font-size:11px}
+.nitem.unread{border-left:3px solid #0072a3 !important;font-weight:600}
+.cards2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:1100px){.cards2{grid-template-columns:1fr}}
+.pill.unk{color:#565656;border-color:#b3b3b3;background:#f4f4f4}
+.soon{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;line-height:16px;padding:0 6px;border-radius:8px;background:#e1f1f6;color:#004a70;border:1px solid #49afd9;vertical-align:1px;margin-left:4px;white-space:nowrap}
+.nav .soon{font-size:9px;line-height:14px;padding:0 5px;margin-left:6px;vertical-align:2px}
+.soon.big{font-size:12px;line-height:20px;padding:0 9px;vertical-align:6px}
+.shell.collapsed .soon{display:none}
+.tf[hidden]{display:none}
+body.dark .nhead,body.dark .nitem{border-color:#3a4d59 !important}
+body.dark .pill.unk{background:#22343c;color:#adbbc4;border-color:#5a6b78}
+body.dark .soon{background:#1d3a4a;color:#cfe8f3}

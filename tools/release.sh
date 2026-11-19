@@ -1,7 +1,8 @@
 #!/bin/bash
 # tools/release.sh <version>
 # Sets the version, rebuilds the script list in index.html from tools/scripts.txt, merges CHANGELOG.new,
-# runs the syntax and smoke checks (sample data and live; live needs API_PW), then commits, tags and pushes to origin.
+# runs the syntax and smoke checks (sample data and live; live needs API_PW) and the console service checks,
+# then commits, tags and pushes to origin. Install service changes first with: sudo bash tools/install-server.sh
 set -eo pipefail
 V="$1"
 cd /opt/salt-ui
@@ -25,6 +26,12 @@ PY
 for f in $(cat tools/scripts.txt); do node --check "www/$f"; done
 DEMO=1 node test/smoke.js 2>&1 | grep -v -e NODE_TLS -e trace-warnings
 API_PW="$API_PW" node test/smoke.js 2>&1 | grep -v -e NODE_TLS -e trace-warnings
+/opt/saltstack/salt/bin/python3.11 -m py_compile server/console_api.py && rm -rf server/__pycache__
+started=$(systemctl show -p ActiveEnterTimestamp --value salt-console)
+if [ -z "$started" ] || [ "$(stat -c %Y server/console_api.py)" -gt "$(date -d "$started" +%s)" ]; then
+  echo "The console service is not running the current server/console_api.py: run sudo bash tools/install-server.sh first"; exit 1
+fi
+API_PW="$API_PW" python3 test/api_test.py
 git add -A
 git commit -q -m "Lab Salt Console $V"
 git tag "v$V"

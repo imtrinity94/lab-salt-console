@@ -4,7 +4,17 @@ addNav(null, '#/reports', 'Reports', 'Dashboard');
 addNav(null, '#/minions', 'Minions', 'Targets');
 const MIN_ACT_JOBS = 15;
 const osName = g => ((g.os || '') + ' ' + (g.osrelease || '')).trim();
-const presencePill = up => up ? '<span class="pill ok">Present</span>' : '<span class="pill bad">Not responding</span>';
+// Presence follows the console service when it runs: Present when the master reported the minion connected, or it returned
+// job data, within the presence expiration; Disconnected when seen before but not since; Unknown when never seen.
+// Without the service the live answer of manage.status is shown instead.
+function presencePill(up, id) {
+  const P = typeof SHARED !== 'undefined' && SHARED.presence ? SHARED.presence : null;
+  if (!P || !id) return up ? '<span class="pill ok">Present</span>' : '<span class="pill bad">Not responding</span>';
+  const p = P.minions[id];
+  if (!p) return '<span class="pill unk" title="The console service has not seen this minion yet">Unknown</span>';
+  const seen = 'Last seen ' + new Date(p.lastSeen * 1000).toLocaleString();
+  return p.status === 'Present' ? `<span class="pill ok" title="${esc(seen)}">Present</span>` : `<span class="pill bad" title="${esc(seen)}">Disconnected</span>`;
+}
 // /var/run/reboot-required is how Debian and Ubuntu flag a pending reboot; other OS families are shown as not checked.
 const rebootCell = (g, flag) => g.os_family !== 'Debian' ? '<span class="muted">not checked</span>' : flag === true ? '<span class="pill warn">Yes</span>' : flag === false ? 'No' : '';
 
@@ -16,7 +26,7 @@ routes.minions = async function (arg) {
   return `<h1>Minions</h1><h2 class="count">${plural(rows.length, 'minion')}</h2><div class="bar">${hsSplit()}</div>` +
     table([
       { t: 'Minion ID', f: r => `<a href="#/minions/${enc(r.id)}">${esc(r.id)}</a>` },
-      { t: 'Presence', f: r => presencePill(r.up) },
+      { t: 'Presence', f: r => presencePill(r.up, r.id) },
       { t: 'OS', f: r => esc(osName(r.g)) },
       { t: 'Salt version', f: r => esc(r.g.saltversion) },
       { t: 'IP address', f: r => esc((r.g.ipv4 || []).filter(i => i !== '127.0.0.1').join(', ')) },
@@ -34,7 +44,7 @@ async function minionPage(arg) {
   const up = (res[0].up || []).indexOf(id) >= 0, g = res[1] && typeof res[1][id] === 'object' ? res[1][id] : null;
   const d = `data-tgt="${esc(id)}" data-tt="list"`;
   const labels = { details: 'Details', grains: 'Grains', pillar: 'Pillar', packages: 'Packages', activity: 'Activity', targets: 'Targets' };
-  const head = `<p class="crumb"><a href="#/minions">Minions</a> / ${esc(id)}</p><h1>${esc(id)} ${presencePill(up)}</h1><div class="bar"><span class="grp"><button class="btn btn-primary" data-act="runhs" ${d}>Run Highstate</button><button class="btn" data-act="runjob" ${d}>Run Job</button><button class="btn" data-act="runcmd" ${d}>Run Command</button></span></div>` + tabs(Object.keys(labels).map(k => [base + k, labels[k], k === tab]));
+  const head = `<p class="crumb"><a href="#/minions">Minions</a> / ${esc(id)}</p><h1>${esc(id)} ${presencePill(up, id)}</h1><div class="bar"><span class="grp"><button class="btn btn-primary" data-act="runhs" ${d}>Run Highstate</button><button class="btn" data-act="runjob" ${d}>Run Job</button><button class="btn" data-act="runcmd" ${d}>Run Command</button></span></div>` + tabs(Object.keys(labels).map(k => [base + k, labels[k], k === tab]));
   const silent = '<div class="note">This minion did not answer, so live data cannot be read right now.</div>';
   let body;
   if (tab === 'activity') {
