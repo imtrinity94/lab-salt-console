@@ -1,11 +1,12 @@
 formatVersion: 2
 name: Salt Node - Ubuntu
-version: 1.0.0
+version: 1.1.0
 # Cloud template for VCF Automation 9 (VM Apps) and Aria Automation 8.x: one Ubuntu 24.04 VM that becomes either
 #  - a Salt master running the Lab Salt Console (salt-master, salt-api, local minion, nginx, console service), or
 #  - a Salt minion pointed at that master.
-# Everything is done by cloud-init on first boot; no Orchestrator workflows or ABX actions are needed.
-# Before you import it, change the defaults marked CHANGE to match your VCF Automation setup (see docs/SETUP.md, section 4).
+# The VM is deployed straight from the Ubuntu 24.04 cloud image OVA (imageRef), so no VM template or image mapping is needed;
+# cloud-init in that image applies everything on first boot. No Orchestrator workflows or ABX actions are needed.
+# Before you import it, change the networkTag default (marked CHANGE) to a tag on your network (see docs/SETUP.md, section 4).
 # Install progress is published to the VM's advanced setting guestinfo.salt.status and to /var/log/salt-install.log.
 # Note: VCF Automation reads dollar-brace expressions as its own, so the shell code below never uses them.
 outputs:
@@ -16,8 +17,8 @@ outputs:
       | | |
       |---|---|
       | Role | ${input.saltRole} |
-      | Image | ${input.image} |
-      | Size | ${input.cpuCount} vCPU / ${input.memoryGb} GB |
+      | Image | ${input.imageOva} |
+      | Size | ${input.cpuCount} vCPU / ${input.memoryGb} GB / ${input.diskSizeGb} GB disk |
       | IP address | ${resource.saltNode.address} |
       | Console (master only) | https://${resource.saltNode.address}/ (user ${input.apiUsername}) |
       | OS login | ssh ${input.osUsername}@${resource.saltNode.address} |
@@ -40,12 +41,11 @@ inputs:
     title: VM name
     description: VM name, guest host name and Salt minion id. Lowercase letters, digits and hyphens.
     pattern: '^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$'
-  image:
+  imageOva:
     type: string
-    title: Image
-    description: Image mapping for Ubuntu 24.04 with cloud-init and open-vm-tools.
-    # CHANGE: the name of your Ubuntu 24.04 image mapping
-    default: Ubuntu 24
+    title: Ubuntu OVA URL
+    description: Ubuntu 24.04 cloud image OVA. VCF Automation downloads it at deployment time. Point this at an internal web server if your VCF Automation has no internet access.
+    default: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.ova
   cpuCount:
     type: integer
     title: vCPUs
@@ -58,6 +58,13 @@ inputs:
     minimum: 2
     maximum: 64
     default: 2
+  diskSizeGb:
+    type: integer
+    title: Disk size (GB)
+    description: Boot disk size. The cloud image disk is grown to this size on first boot.
+    minimum: 20
+    maximum: 500
+    default: 30
   networkTag:
     type: string
     title: Network
@@ -146,9 +153,13 @@ resources:
     type: Cloud.vSphere.Machine
     properties:
       name: ${input.vmName}
-      image: ${input.image}
+      imageRef: ${input.imageOva}
       cpuCount: ${input.cpuCount}
       totalMemoryMB: ${input.memoryGb * 1024}
+      storage:
+        bootDiskCapacityInGB: ${input.diskSizeGb}
+      # No vSphere guest customization: cloud-init in the cloud image (OVF user-data) configures the guest
+      customizeGuestOs: false
       networks:
         - network: ${resource.saltNetwork.id}
       saltRole: ${input.saltRole}

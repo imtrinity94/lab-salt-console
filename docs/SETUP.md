@@ -100,23 +100,21 @@ new one) and the console data.
 ## 4. Install with VCF Automation
 
 If you run **VCF Automation 9** (a VM Apps organization) or **Aria Automation 8.x**, the cloud template
-[vcfa/salt-node-ubuntu.yaml](../vcfa/salt-node-ubuntu.yaml) builds the whole thing from the catalog. Each request
-gives you one Ubuntu 24.04 VM, which becomes either:
+[vcfa/salt-node-ubuntu.yaml](../vcfa/salt-node-ubuntu.yaml) builds everything from the catalog. Each request deploys
+one VM straight from the **Ubuntu 24.04 cloud image OVA**, which becomes either:
 
 - **a master**: Salt master, salt-api, its own minion, nginx and the console, installed by cloud-init running
   [tools/bootstrap-master.sh](../tools/bootstrap-master.sh) from this repository; or
 - **a minion**: `salt-minion`, pointed at the master you give it.
 
-Nothing else is needed in VCF Automation: no Orchestrator workflows, ABX actions or subscriptions. The steps below
-assume you can administer the organization: create image mappings, tag networks, import templates and publish to
-the catalog.
+You don't need to prepare a VM template or create an image mapping: VCF Automation downloads the OVA and the image's
+own cloud-init does the rest. You also don't need any Orchestrator workflows, ABX actions or subscriptions.
 
 ```mermaid
 flowchart LR
-  T["Ubuntu 24.04 VM template<br/>(cloud-init, OVF data source)"] --> I["Image mapping<br/>Ubuntu 24"]
-  N["Network with<br/>capability tag net:salt"] --> CT
-  I --> CT["Cloud template<br/>Salt Node - Ubuntu"]
-  CT --> C["Catalog item"]
+  O["Ubuntu 24.04 cloud image OVA<br/>(cloud-images.ubuntu.com)"] --> CT
+  N["Network with<br/>capability tag"] --> CT
+  CT["Cloud template<br/>Salt Node - Ubuntu"] --> C["Catalog item"]
   C -- "role: master" --> M["VM: cloud-init runs<br/>bootstrap-master.sh"]
   C -- "role: minion" --> MI["VM: cloud-init installs<br/>salt-minion"]
   M --> UI["https://master/<br/>Lab Salt Console"]
@@ -129,84 +127,26 @@ flowchart LR
 |---|---|
 | vCenter cloud account and a cloud zone | Already set up in most environments. The zone must be added to the project you use. |
 | A project | You must be a member, and the project must include the cloud zone. |
-| An Ubuntu 24.04 VM template | With cloud-init and open-vm-tools, prepared as in [4.2](#42-prepare-the-ubuntu-2404-vm-template). |
-| An image mapping | Points to that template. The template's default name for it is `Ubuntu 24`. |
 | A network with a capability tag | The VMs connect to it. The template's default tag is `net:salt`. |
 | A storage profile | Any profile valid in the cloud zone. |
-| Outbound internet from the VMs | To `packages.broadcom.com`, `github.com`, `raw.githubusercontent.com` and the Ubuntu mirrors, directly or through a proxy configured in the template. |
-| IP addresses | One per VM. Either a static address you type into the request form, or DHCP / the network profile's IP range. |
+| Access to the OVA | VCF Automation downloads `https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.ova` (about 600 MB) at deployment time. Without internet access, put the OVA on an internal web server and change the template's **Ubuntu OVA URL** default to it. |
+| Outbound internet from the VMs | To `packages.broadcom.com`, `github.com`, `raw.githubusercontent.com` and the Ubuntu mirrors, directly or through a proxy. |
+| IP addresses | One per VM: a static address typed into the request form, or DHCP / the network profile's IP range. |
 
-### 4.2 Prepare the Ubuntu 24.04 VM template
+### 4.2 Tag the network
 
-Skip this step if you already have an Ubuntu 24.04 template that runs `cloudConfig` from VCF Automation. These steps
-follow Broadcom KB [320397](https://knowledge.broadcom.com/external/article/320397).
+Go to **Infrastructure > Resources > Networks**, select the network the VMs should use, click **Tags**, and add the
+capability tag `net:salt` (or your own, and put that in the template). The network must belong to a network profile
+for the cloud zone's region. A tag on the network profile works as well.
 
-1. In vCenter, create a VM (2 vCPU, 2 GB, 40 GB thin disk, VMXNET3 NIC) and install **Ubuntu Server 24.04** from the
-   ISO. Pick the minimal or standard install, enable OpenSSH, and create a temporary user.
-2. Log in and install the guest tools and cloud-init, then bring the OS up to date:
+![Networks: select the network and click Tags](images/vcfa-06-networks.png)
 
-   ```bash
-   sudo apt-get update && sudo apt-get -y upgrade
-   sudo apt-get -y install cloud-init open-vm-tools curl
-   ```
+The template applies IP settings inside the guest, so:
 
-3. Tell cloud-init to read only the OVF data source, which is how VCF Automation hands over `cloudConfig`:
+- if you type a static IP into the request form, the network needs neither an IP range nor DHCP;
+- if you leave the IP empty, the VM keeps whatever address DHCP or the network profile gives it.
 
-   ```bash
-   sudo dpkg-reconfigure cloud-init
-   ```
-
-   In the dialog, untick everything except **OVF** and confirm. To do the same without the dialog:
-
-   ```bash
-   echo 'datasource_list: [ OVF, None ]' | sudo tee /etc/cloud/cloud.cfg.d/90_dpkg.cfg
-   ```
-
-4. Remove the installer's leftovers so cloud-init can manage the host name and network on the clones:
-
-   ```bash
-   sudo rm -f /etc/cloud/cloud.cfg.d/99-installer.cfg /etc/cloud/cloud.cfg.d/subiquity-disable-cloudinit-networking.cfg
-   sudo rm -f /etc/netplan/50-cloud-init.yaml
-   ```
-
-5. Clear cloud-init's state, the machine ID and the SSH host keys, so every clone starts fresh:
-
-   ```bash
-   sudo cloud-init clean --logs --seed
-   sudo truncate -s 0 /etc/machine-id
-   sudo rm -f /etc/ssh/ssh_host_*
-   sudo shutdown -h now
-   ```
-
-   Ubuntu creates new SSH host keys on the next boot.
-
-6. In vCenter, **Edit Settings** on the powered-off VM. Set **CD/DVD drive 1** to **Client Device** with
-   **Passthrough CD-ROM** mode, so VCF Automation can attach its OVF data. Then **Convert to Template**.
-
-The temporary user from step 1 stays in the template. The cloud template creates its own login user on every VM.
-Remove the temporary one, or give it a strong password, before you convert the VM.
-
-### 4.3 Image mapping and network tag
-
-1. **Image mapping.** Go to **Infrastructure > Configure > Image Mappings > New**.
-   - Name: `Ubuntu 24`, or another name you then enter as the template's `image` default.
-   - Account / region: your vCenter.
-   - Image: the template from 4.2.
-
-   ![Image mapping](images/vcfa-05-image-mapping-ubuntu.png)
-
-2. **Network tag.** Go to **Infrastructure > Resources > Networks**, open the network the VMs should use, and add
-   the capability tag `net:salt` (or your own). The network must also be in a network profile for the cloud zone's
-   region. A tag set on the network profile works as well.
-
-   ![Networks: select the network and click Tags](images/vcfa-06-networks.png)
-
-3. **IP addresses.** The template only sets IPs inside the guest:
-   - If you will type a static IP into the request form, the network profile needs no IP range, and DHCP is not
-     needed either.
-   - If you leave the IP empty, the VM keeps whatever address DHCP or the network profile gives it.
-
-### 4.4 Import the cloud template
+### 4.3 Import the cloud template
 
 1. Download the template file:
 
@@ -215,50 +155,51 @@ Remove the temporary one, or give it a strong password, before you convert the V
    ```
 
 2. Go to **Design > Templates** (the **Blueprints** page) and choose **New from > Upload**.
-   - **Name**: e.g. `Salt Node - Ubuntu`, or your naming convention (in the author's lab, `LAB - Salt Node - Ubuntu`).
+   - **Name**: e.g. `Salt Node - Ubuntu`, or your own naming convention. In the author's lab it is
+     `LAB - Salt Node - Ubuntu`.
    - **Project**: your project.
    - **File**: `salt-node-ubuntu.yaml`.
 
    ![New from > Upload](images/vcfa-02-new-from-upload.png)
 
-3. Open the template and change the two defaults marked `CHANGE`:
-   - `image`: your image mapping's name.
-   - `networkTag`: your network's capability tag.
-
-   Other defaults you may want to set: DNS servers, DNS domain, gateway, prefix length, NTP servers and the Salt
-   version.
+3. Open the template and change the `networkTag` default (marked `CHANGE`) to your network's tag. You may also want
+   to set defaults for the DNS servers, DNS domain, gateway, prefix length, NTP servers, the Salt version and the OVA
+   URL.
 
    ![The imported template](images/vcfa-03-template-canvas.png)
 
 4. Click **Test** and enter a VM name and an OS password. The test should end with **Successful**. If it reports
-   *No matching image* or *No matching network*, the image mapping name or network tag doesn't match.
+   *No matching network*, no network in the project's cloud zones has the tag.
 5. Click **Version**, enter `1.0.0`, tick **Release this version to the catalog**, and click **Create**.
 
-### 4.5 Publish to the catalog
+### 4.4 Publish to the catalog
 
 1. Go to **Content & Policies > Content Sources > New > Template**. Choose the project, click **Validate**, then
-   **Create & Import**. If the project already has a template content source, just open it and click **Save &
-   Import** so it picks up the new template.
+   **Create & Import**. If the project already has a template content source, open it and click **Save & Import**
+   so it picks up the new template.
 
    ![Content sources](images/vcfa-07-content-sources.png)
 
-2. Go to **Content & Policies > Policies > Definitions > New Policy > Content Sharing Policy**. Scope it to the project, add the
-   content source (or only this template), and add the users or groups who may request it. Skip this if a sharing
-   policy already covers the content source.
-3. **Catalog** now shows **Salt Node - Ubuntu**.
+2. Go to **Content & Policies > Policies > Definitions > New Policy > Content Sharing Policy**. Scope it to the
+   project, add the content source (or only this template), and add the users or groups who may request it. Skip
+   this step if a sharing policy already covers the content source.
+3. **Consume > Catalog** now shows **Salt Node - Ubuntu**.
 
-### 4.6 Request the master
+### 4.5 Request the master
 
-In the **Catalog**, request **Salt Node - Ubuntu** with these inputs:
+In **Consume > Catalog**, click **Request** on **Salt Node - Ubuntu** and fill in:
 
 ![Request form](images/vcfa-09-request-form.png)
+
+*This screenshot shows the earlier version with an **Image** field. The current template has **Ubuntu OVA URL** and
+**Disk size (GB)** in its place.*
 
 | Input | Value for the master |
 |---|---|
 | Salt role | **Master (Salt master with the Lab Salt Console)** |
 | VM name | e.g. `salt01`. This is also the host name and the master's minion ID. |
-| Image | your Ubuntu 24.04 image mapping (default from the template) |
-| vCPUs / Memory (GB) | 2 / 2 is enough for a lab; 4 GB for more than about 50 minions |
+| Ubuntu OVA URL | leave the default, or your internal copy |
+| vCPUs / Memory (GB) / Disk size (GB) | 2 / 2 / 30 is enough for a lab. Use 4 GB of memory for more than about 50 minions. |
 | Network | the capability tag (default from the template) |
 | Static IP address, prefix length, gateway, DNS servers, DNS domain | the master's address. Leave the IP empty to use DHCP or the network profile. |
 | NTP servers | optional |
@@ -267,17 +208,17 @@ In the **Catalog**, request **Salt Node - Ubuntu** with these inputs:
 | Console user / password | the console login (default user `saltapi`). Leave the password empty to have one generated. |
 | Console version | `main`, or a release tag such as `v1.4.1` |
 
-The deployment completes in VCF Automation as soon as the VM is up. Salt and the console then take another 2 to 6
-minutes inside the guest (about a minute and a half in the author's lab). The deployment's **Overview** tab shows
-the console address:
+VCF Automation marks the deployment complete as soon as the VM is up; Salt and the console then take another 2 to 6
+minutes inside the guest. The first deployment also waits for the OVA to download. The deployment's **Overview**
+tab shows the console address:
 
 ![Deployment overview](images/vcfa-10-deployment.png)
 
-### 4.7 Follow the install
+### 4.6 Follow the install
 
-The VM reports each step to the advanced setting `guestinfo.salt.status`. To see it in vCenter, open the VM, then
-**Configure > Settings > VM Options > Advanced > Edit Configuration Parameters**, and filter on `guestinfo.salt`.
-You can also follow it in the guest:
+The VM reports each step to the advanced setting `guestinfo.salt.status`. To see it in vCenter, open the VM and go
+to **Configure > Settings > VM Options > Advanced > Edit Configuration Parameters**, then filter on
+`guestinfo.salt`. Or watch it in the guest:
 
 ```bash
 sudo tail -f /var/log/salt-install.log
@@ -290,39 +231,40 @@ sudo tail -f /var/log/salt-install.log
 | `3/4 time sync: ...` | NTP is set. |
 | `4/4 installing the Salt master and the Lab Salt Console` | The bootstrap is running. Its full log is `/var/log/salt-console-bootstrap.log`. |
 | `4/4 done: Salt master with the console at https://<ip>/` | Finished. Open the address and log in. |
-| `4/4 FAILED ...` | Read the log the message names. See [4.10](#410-troubleshooting-the-vcf-automation-install). |
+| `4/4 FAILED ...` | Read the log it names, and see [4.9](#49-troubleshooting-the-vcf-automation-install). |
 
-The console password is in `/root/.salt-api-credentials` on the master. It is the one you entered, or the generated
-one if you left it empty.
+The console password is in `/root/.salt-api-credentials` on the master: either the one you entered, or the one that
+was generated.
 
-### 4.8 Request minions
+### 4.7 Request minions
 
-Request **Salt Node - Ubuntu** again with:
+Request **Salt Node - Ubuntu** again:
 
 - **Salt role**: **Minion**;
 - **Salt master address**: the master's IP;
-- its own **VM name** and IP.
+- a new **VM name** and IP.
 
-The status ends with `4/4 done: minion <name> ... waiting for its key to be accepted`. In the console, the new key
-appears under **Minion Keys > Pending** and the bell shows a notification. Accept it, and the minion is listed under
-**Minions** as Present within a minute. For minions that weren't built with this template, see
+The status ends with `4/4 done: minion <name> ... waiting for its key to be accepted`. The key then appears in the
+console under **Minion Keys > Pending**, and the bell shows a notification. Accept it, and within a minute the
+minion is listed under **Minions** as Present. For machines that weren't built from the template, see
 [7. Add minions](#7-add-minions).
 
-### 4.9 Updating a master built from the template
+### 4.8 Updating a master built from the template
 
-The template installs the console from git in `/opt/salt-ui`, so updates work exactly as in
-[8.1](#81-update-to-a-new-version). To build new masters with a newer console, request with **Console version**
-set to the new tag.
+The template installs the console from git into `/opt/salt-ui`, so updates work exactly as in
+[8.1](#81-update-to-a-new-version). To build new masters with a newer console, set **Console version** to the new
+tag when you request them.
 
-### 4.10 Troubleshooting the VCF Automation install
+### 4.9 Troubleshooting the VCF Automation install
 
 | Symptom | Cause and fix |
 |---|---|
-| `guestinfo.salt.status` never appears, and `/var/log/salt-install.log` is missing | cloud-init didn't receive the `cloudConfig`. On the VM, run `sudo cloud-init status --long` and check `/var/log/cloud-init.log`. "Used fallback datasource" means the template's data source list or CD-ROM setting is wrong. Redo [4.2](#42-prepare-the-ubuntu-2404-vm-template), steps 3 and 6. |
-| Status stops at `2/4` | The static IP, gateway or DNS is wrong, so the VM can't reach `github.com`. Check `/etc/netplan/60-static.yaml` and run `getent hosts github.com`. |
-| `4/4 FAILED cannot download bootstrap-master.sh` | No internet or proxy, or the **Console version** isn't a branch or tag that exists. |
-| `4/4 FAILED: see /var/log/salt-console-bootstrap.log` | Read that log. Usually it is a package download failure. Fix the cause, then re-run `sudo bash /root/bootstrap-master.sh` on the VM. It is safe to run again. |
-| Request fails with "No matching image" or "network" | The **Image** input doesn't match an image mapping name, or no network in the project's cloud zones has the tag. |
+| The request fails while cloning the image or downloading the OVA | VCF Automation can't reach the OVA URL. Host the OVA internally and change the **Ubuntu OVA URL**. |
+| Request fails with "No matching network" | No network in the project's cloud zones has the tag in **Network**. |
+| `guestinfo.salt.status` never appears and `/var/log/salt-install.log` is missing | cloud-init didn't receive the configuration. On the VM, check `sudo cloud-init status --long` and `/var/log/cloud-init.log`. Make sure the template still has `customizeGuestOs: false`. |
+| The status stops at `2/4` | The static IP, gateway or DNS is wrong, so the VM can't reach `github.com`. Check `/etc/netplan/60-static.yaml` and `getent hosts github.com`. |
+| `4/4 FAILED cannot download bootstrap-master.sh` | There's no internet or proxy access, or **Console version** isn't an existing branch or tag. |
+| `4/4 FAILED: see /var/log/salt-console-bootstrap.log` | Read that log; it is usually a package download failure. Fix the cause, then run `sudo bash /root/bootstrap-master.sh` on the VM. It is safe to run again. |
 | The minion never shows under Pending | The minion can't reach the master on TCP 4505 and 4506, or the master address is wrong. Check `/var/log/salt/minion` on the minion. |
 
 ## 5. Install: step by step

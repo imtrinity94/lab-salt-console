@@ -6,9 +6,9 @@
 - tools/bootstrap-master.sh turns a fresh Ubuntu 24.04 VM into a Salt master running the console in one command. It is safe to run again: existing settings, certificate, password and console data are kept.
 - tools/install-server.sh now also works on a master that has no nginx site yet: it enables the site, removes nginx's default site, and only backs up a site file that exists.
 - master-lab.conf now includes keep_jobs_seconds: 2592000 (30 days), so a new master keeps the job history the Highstate views use. The lab master already had it.
-- VCF Automation: vcfa/salt-node-ubuntu.yaml is a cloud template for VCF Automation 9 (VM Apps) and Aria Automation 8.x. Each request builds an Ubuntu 24.04 master with the console, or a minion, entirely through cloud-init. Static IP, DNS and NTP are optional, and the console version is selectable. docs/SETUP.md section 4 covers the whole process: template preparation, image mapping, network tag, import, catalog, request, progress and troubleshooting, with screenshots. Tested end to end in the author's lab.
+- VCF Automation: vcfa/salt-node-ubuntu.yaml is a cloud template for VCF Automation 9 (VM Apps) and Aria Automation 8.x. Each request deploys the Ubuntu 24.04 cloud image OVA directly (imageRef, customizeGuestOs false, configurable disk size), with no VM template or image mapping, and builds a master with the console, or a minion, entirely through cloud-init. Static IP, DNS and NTP are optional, and the console version is selectable. docs/SETUP.md section 4 covers the whole process: requirements, network tag, import, catalog, request, progress and troubleshooting, with screenshots. Tested end to end in the author's lab.
 - tools/bootstrap-master.sh sets HOME when it is missing (as under cloud-init), so the git clone works.
-- README: screenshots, a quick start, and links to the guide. Social preview image in docs/images/social-preview.png.
+- README: rewritten around the build chain (cloud template, first-boot setup, bootstrap, install-server, console service), with an explanation of every script and configuration file, screenshots and a quick start. Social preview image in docs/images/social-preview.png.
 
 ## 1.4.0 - 2026-11-19
 
