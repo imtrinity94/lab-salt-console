@@ -1,5 +1,13 @@
 # Changelog - Lab Salt Console
 
+## 1.4.1 - 2026-11-20
+
+- Setup guide: docs/SETUP.md covers the architecture, three ways to install (one command, the VCF Automation template, step by step), a tour of the console with screenshots, adding minions, updates, backup and restore, certificates, logs, troubleshooting, uninstalling and releasing.
+- tools/bootstrap-master.sh turns a fresh Ubuntu 24.04 VM into a Salt master running the console in one command. It is safe to run again: existing settings, certificate, password and console data are kept.
+- tools/install-server.sh now also works on a master that has no nginx site yet: it enables the site, removes nginx's default site, and only backs up a site file that exists.
+- master-lab.conf now includes keep_jobs_seconds: 2592000 (30 days), so a new master keeps the job history the Highstate views use. The lab master already had it.
+- README: screenshots, a quick start, and links to the guide. Social preview image in docs/images/social-preview.png.
+
 ## 1.4.0 - 2026-11-19
 
 - Console service on the master (server/console_api.py, systemd unit salt-console, one SQLite file in /var/lib/salt-console). It listens on the Salt event bus, keeps the console's shared data and runs schedules. Install or update it with sudo bash tools/install-server.sh.

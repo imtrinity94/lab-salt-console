@@ -34,7 +34,7 @@ import salt.runner
 import salt.utils.event
 from croniter import croniter
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 DB_PATH = os.environ.get('CONSOLE_DB', '/var/lib/salt-console/console.db')
 HOST = '127.0.0.1'
 PORT = int(os.environ.get('CONSOLE_PORT', '8001'))
