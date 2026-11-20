@@ -191,9 +191,6 @@ In **Consume > Catalog**, click **Request** on **Salt Node - Ubuntu** and fill i
 
 ![Request form](images/vcfa-09-request-form.png)
 
-*This screenshot shows the earlier version with an **Image** field. The current template has **Ubuntu OVA URL** and
-**Disk size (GB)** in its place.*
-
 | Input | Value for the master |
 |---|---|
 | Salt role | **Master (Salt master with the Lab Salt Console)** |
