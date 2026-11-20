@@ -1,0 +1,285 @@
+formatVersion: 2
+name: Salt Node - Ubuntu
+version: 1.0.0
+# Cloud template for VCF Automation 9 (VM Apps) and Aria Automation 8.x: one Ubuntu 24.04 VM that becomes either
+#  - a Salt master running the Lab Salt Console (salt-master, salt-api, local minion, nginx, console service), or
+#  - a Salt minion pointed at that master.
+# Everything is done by cloud-init on first boot; no Orchestrator workflows or ABX actions are needed.
+# Before you import it, change the defaults marked CHANGE to match your VCF Automation setup (see docs/SETUP.md, section 4).
+# Install progress is published to the VM's advanced setting guestinfo.salt.status and to /var/log/salt-install.log.
+# Note: VCF Automation reads dollar-brace expressions as its own, so the shell code below never uses them.
+outputs:
+  __deploymentOverview:
+    value: |
+      ### Salt ${input.saltRole}: ${input.vmName}
+
+      | | |
+      |---|---|
+      | Role | ${input.saltRole} |
+      | Image | ${input.image} |
+      | Size | ${input.cpuCount} vCPU / ${input.memoryGb} GB |
+      | IP address | ${resource.saltNode.address} |
+      | Console (master only) | https://${resource.saltNode.address}/ (user ${input.apiUsername}) |
+      | OS login | ssh ${input.osUsername}@${resource.saltNode.address} |
+
+      Salt finishes installing a few minutes after the deployment completes. Progress: VM advanced setting
+      guestinfo.salt.status, or /var/log/salt-install.log in the guest.
+      A new minion waits under Minion Keys > Pending in the console until you accept it.
+inputs:
+  saltRole:
+    type: string
+    title: Salt role
+    oneOf:
+      - title: Master (Salt master with the Lab Salt Console)
+        const: master
+      - title: Minion
+        const: minion
+    default: minion
+  vmName:
+    type: string
+    title: VM name
+    description: VM name, guest host name and Salt minion id. Lowercase letters, digits and hyphens.
+    pattern: '^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$'
+  image:
+    type: string
+    title: Image
+    description: Image mapping for Ubuntu 24.04 with cloud-init and open-vm-tools.
+    # CHANGE: the name of your Ubuntu 24.04 image mapping
+    default: Ubuntu 24
+  cpuCount:
+    type: integer
+    title: vCPUs
+    minimum: 1
+    maximum: 16
+    default: 2
+  memoryGb:
+    type: integer
+    title: Memory (GB)
+    minimum: 2
+    maximum: 64
+    default: 2
+  networkTag:
+    type: string
+    title: Network
+    description: Capability tag of the network to connect to.
+    # CHANGE: a capability tag that is set on your target network (or its network profile)
+    default: 'net:salt'
+  ipAddress:
+    type: string
+    title: Static IP address (optional)
+    description: Leave empty to keep the address VCF Automation or DHCP gives the VM. When set, the address, gateway and DNS below are applied in the guest.
+    pattern: '^$|^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$'
+    default: ''
+  prefixLength:
+    type: integer
+    title: Prefix length
+    description: Used with a static IP address. 24 = 255.255.255.0
+    minimum: 8
+    maximum: 30
+    default: 24
+  gateway:
+    type: string
+    title: Default gateway
+    description: Used with a static IP address.
+    default: ''
+  dnsServers:
+    type: string
+    title: DNS servers
+    description: Comma separated. Used with a static IP address.
+    default: ''
+  dnsDomain:
+    type: string
+    title: DNS domain
+    description: Used with a static IP address, and for the master's certificate.
+    default: ''
+  ntpServers:
+    type: string
+    title: NTP servers (optional)
+    description: Comma separated. Leave empty to keep the image default.
+    default: ''
+  osUsername:
+    type: string
+    title: OS login user
+    description: Linux sudo user created in the guest, with SSH password login.
+    pattern: '^[a-z_][a-z0-9_-]{1,30}$'
+    default: saltadmin
+  osPassword:
+    type: string
+    title: OS login password
+    encrypted: true
+    minLength: 8
+  masterAddress:
+    type: string
+    title: Salt master address (minion only)
+    description: IP address or name of the Salt master. Ignored for a master.
+    default: ''
+  saltVersionPin:
+    type: string
+    title: Salt version
+    description: apt pin for the salt-* packages, e.g. 3006.* (LTS) or 3007.*. Empty takes the newest version.
+    default: '3006.*'
+  apiUsername:
+    type: string
+    title: Console user (master only)
+    description: Local account (no shell) used to log in to the console and salt-api through PAM.
+    pattern: '^[a-z_][a-z0-9_-]{1,30}$'
+    default: saltapi
+  apiPassword:
+    type: string
+    title: Console password (master only)
+    description: Letters and digits. Leave empty to generate one in the guest (saved in /root/.salt-api-credentials).
+    encrypted: true
+    default: ''
+  consoleVersion:
+    type: string
+    title: Console version (master only)
+    description: Git branch or tag of github.com/imtrinity94/lab-salt-console to install, e.g. main or v1.4.1.
+    default: main
+resources:
+  saltNetwork:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: ${input.networkTag}
+  saltNode:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: ${input.vmName}
+      image: ${input.image}
+      cpuCount: ${input.cpuCount}
+      totalMemoryMB: ${input.memoryGb * 1024}
+      networks:
+        - network: ${resource.saltNetwork.id}
+      saltRole: ${input.saltRole}
+      # First boot, in order: 1) OS login user  2) static IP (only when one was given)  3) NTP (only when given)
+      # 4) Salt: a master runs tools/bootstrap-master.sh from the console repository; a minion installs salt-minion.
+      cloudConfig: |
+        #cloud-config
+        preserve_hostname: false
+        hostname: ${input.vmName}
+        manage_etc_hosts: true
+        ssh_pwauth: true
+        write_files:
+          - path: /etc/ssh/sshd_config.d/01-password-auth.conf
+            permissions: '0644'
+            content: |
+              PasswordAuthentication yes
+              KbdInteractiveAuthentication yes
+          - path: /root/salt-install.env
+            permissions: '0600'
+            content: |
+              NET_IP=${input.ipAddress}
+              NET_PREFIX=${input.prefixLength}
+              NET_GW=${input.gateway}
+              NET_DNS=${input.dnsServers}
+              NET_DOMAIN=${input.dnsDomain}
+              NTP_SERVERS=${input.ntpServers}
+              NODE_ID=${input.vmName}
+              SALT_ROLE=${input.saltRole}
+              SALT_MASTER=${input.masterAddress}
+              SALT_PIN=${input.saltVersionPin}
+              API_USER=${input.apiUsername}
+              API_PASSWORD=${input.apiPassword}
+              CONSOLE_REF=${input.consoleVersion}
+          - path: /usr/local/sbin/salt-status.sh
+            permissions: '0755'
+            content: |
+              #!/bin/bash
+              # Usage: salt-status.sh "<text>" - logs a step and publishes it to guestinfo.salt.status
+              echo "$(date '+%F %T') $1" >> /var/log/salt-install.log
+              vmware-rpctool "info-set guestinfo.salt.status $1" >/dev/null 2>&1 || true
+          - path: /usr/local/sbin/salt-node-setup.sh
+            permissions: '0700'
+            content: |
+              #!/bin/bash
+              # Configures this VM from /root/salt-install.env: login user, network, NTP, then Salt for its role.
+              ENVF=/root/salt-install.env
+              ST=/usr/local/sbin/salt-status.sh
+              getv() { grep "^$1=" "$ENVF" | head -n1 | cut -d= -f2-; }
+              export DEBIAN_FRONTEND=noninteractive
+              exec >> /var/log/salt-install.log 2>&1
+              ROLE=$(getv SALT_ROLE); NODE_ID=$(getv NODE_ID); PIN=$(getv SALT_PIN)
+
+              # 1) login user (user name and password are passed as arguments, not stored in the env file)
+              U="$1"; P="$2"
+              if [ -n "$U" ]; then
+                id "$U" >/dev/null 2>&1 || useradd -m -s /bin/bash "$U"
+                usermod -aG sudo "$U"
+                if [ -n "$P" ]; then echo "$U:$P" | chpasswd; passwd -u "$U" >/dev/null 2>&1; fi
+                systemctl restart ssh 2>/dev/null || true
+              fi
+              $ST "1/4 login user $U ready"
+
+              # 2) static IP, only when one was given
+              IP=$(getv NET_IP)
+              if [ -n "$IP" ]; then
+                PFX=$(getv NET_PREFIX); GW=$(getv NET_GW); DOM=$(getv NET_DOMAIN)
+                DNS=$(getv NET_DNS | tr -d ' ' | sed 's/,/, /g')
+                NIC=$(ls /sys/class/net | grep -v '^lo$' | head -n1)
+                echo 'network: {config: disabled}' > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+                mkdir -p /etc/netplan/backup
+                for F in /etc/netplan/*.yaml; do [ -e "$F" ] && mv "$F" /etc/netplan/backup/; done
+                {
+                  echo "network:"
+                  echo "  version: 2"
+                  echo "  ethernets:"
+                  echo "    $NIC:"
+                  echo "      dhcp4: false"
+                  echo "      dhcp6: false"
+                  echo "      addresses: [$IP/$PFX]"
+                  [ -n "$GW" ] && printf '      routes:\n        - to: default\n          via: %s\n' "$GW"
+                  [ -n "$DNS" ] && echo "      nameservers:" && echo "        addresses: [$DNS]"
+                  [ -n "$DNS" ] && [ -n "$DOM" ] && echo "        search: [$DOM]"
+                } > /etc/netplan/60-static.yaml
+                chmod 600 /etc/netplan/60-static.yaml
+                netplan apply
+                $ST "2/4 static IP $IP/$PFX on $NIC"
+              else
+                $ST "2/4 network left as provided ($(hostname -I | awk '{print $1}'))"
+              fi
+              DOM=$(getv NET_DOMAIN)
+              if [ -n "$DOM" ]; then hostnamectl set-hostname "$NODE_ID"; sed -i "s/^127.0.1.1 .*/127.0.1.1 $NODE_ID.$DOM $NODE_ID/" /etc/hosts; fi
+              for _ in $(seq 1 24); do timeout 5 getent hosts github.com >/dev/null && break; sleep 5; done
+
+              # 3) NTP, only when given
+              NTP_LIST=$(getv NTP_SERVERS | tr ',;' '  ' | xargs)
+              if [ -n "$NTP_LIST" ]; then
+                mkdir -p /etc/systemd/timesyncd.conf.d
+                printf "[Time]\nNTP=%s\n" "$NTP_LIST" > /etc/systemd/timesyncd.conf.d/custom-ntp.conf
+                timedatectl set-ntp true
+                systemctl restart systemd-timesyncd
+              fi
+              $ST "3/4 time sync: $([ -n "$NTP_LIST" ] && echo "$NTP_LIST" || echo image default)"
+
+              # 4) Salt
+              if [ "$ROLE" = "master" ]; then
+                $ST "4/4 installing the Salt master and the Lab Salt Console (several minutes)"
+                REF=$(getv CONSOLE_REF)
+                curl -fsSL "https://raw.githubusercontent.com/imtrinity94/lab-salt-console/$REF/tools/bootstrap-master.sh" -o /root/bootstrap-master.sh \
+                  || { $ST "4/4 FAILED cannot download bootstrap-master.sh ($REF)"; exit 1; }
+                if API_USER=$(getv API_USER) API_PASSWORD=$(getv API_PASSWORD) SALT_PIN=$PIN MINION_ID=$NODE_ID REPO_REF=$REF bash /root/bootstrap-master.sh; then
+                  sed -i 's/^API_PASSWORD=.*/API_PASSWORD=(see \/root\/.salt-api-credentials)/' "$ENVF"
+                  $ST "4/4 done: Salt master with the console at https://$(hostname -I | awk '{print $1}')/"
+                else
+                  $ST "4/4 FAILED: see /var/log/salt-console-bootstrap.log"; exit 1
+                fi
+              else
+                MASTER=$(getv SALT_MASTER)
+                [ -n "$MASTER" ] || { $ST "4/4 FAILED: no Salt master address given"; exit 1; }
+                $ST "4/4 installing salt-minion for master $MASTER"
+                install -d -m 755 /etc/apt/keyrings
+                curl -fsSL https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public -o /etc/apt/keyrings/salt-archive-keyring.pgp \
+                  && curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources -o /etc/apt/sources.list.d/salt.sources \
+                  || { $ST "4/4 FAILED cannot reach the Salt package repository"; exit 1; }
+                if [ -n "$PIN" ]; then printf 'Package: salt-*\nPin: version %s\nPin-Priority: 1001\n' "$PIN" > /etc/apt/preferences.d/salt-pin-1001; fi
+                apt-get update -y
+                mkdir -p /etc/salt/minion.d
+                printf 'master: %s\nid: %s\n' "$MASTER" "$NODE_ID" > /etc/salt/minion.d/lab.conf
+                apt-get install -y salt-minion || { $ST "4/4 FAILED apt install salt-minion"; exit 1; }
+                systemctl enable salt-minion
+                systemctl restart salt-minion
+                $ST "4/4 done: minion $NODE_ID ($(salt-call --version | awk '{print $2}')) waiting for its key to be accepted on $MASTER"
+              fi
+        runcmd:
+          - [ /usr/local/sbin/salt-node-setup.sh, "${input.osUsername}", "${input.osPassword}" ]

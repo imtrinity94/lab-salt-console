@@ -19,6 +19,8 @@
 # Log: /var/log/salt-console-bootstrap.log
 set -eo pipefail
 [ "$(id -u)" = 0 ] || { echo "run as root (sudo)"; exit 1; }
+# cloud-init and some automation tools run scripts without HOME, which git needs
+export HOME="${HOME:-/root}"
 . /etc/os-release
 [ "$ID" = ubuntu ] || echo "WARNING: written for Ubuntu 24.04, this is $PRETTY_NAME"
 
