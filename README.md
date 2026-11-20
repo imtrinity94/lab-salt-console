@@ -35,6 +35,10 @@ sudo API_PASSWORD='ChooseAStrongPassword1' bash bootstrap-master.sh
 Then open `https://<vm ip>/` and log in as `saltapi`. To explore every screen with sample data, without a login, open
 `https://<vm ip>/?demo=1`.
 
+Using **VCF Automation 9** or **Aria Automation 8.x**? Import [vcfa/salt-node-ubuntu.yaml](vcfa/salt-node-ubuntu.yaml)
+as a cloud template. It builds a master with the console, or a minion, from the catalog, with no manual steps.
+See [docs/SETUP.md, section 4](docs/SETUP.md#4-install-with-vcf-automation).
+
 **[docs/SETUP.md](docs/SETUP.md)** is the full guide, with screenshots. It covers:
 
 - what gets installed;
@@ -115,6 +119,7 @@ test/smoke.js              renders every page outside a browser, on sample data 
 test/extra.json            extra pages for the smoke test
 test/api_test.py           checks the console service end to end and removes everything it creates
 docs/SETUP.md              setup and operations guide; screenshots in docs/images
+vcfa/salt-node-ubuntu.yaml VCF Automation / Aria Automation cloud template: Salt master with the console, or a minion
 master-lab.conf            Salt master settings used by the install
 CHANGELOG.md               every release, newest first
 ```

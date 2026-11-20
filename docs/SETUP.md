@@ -188,13 +188,19 @@ Remove the temporary one, or give it a strong password, before you convert the V
 
 ### 4.3 Image mapping and network tag
 
-1. **Image mapping.** Go to **Infrastructure > Configure > Image Mappings > New Image Mapping**.
+1. **Image mapping.** Go to **Infrastructure > Configure > Image Mappings > New**.
    - Name: `Ubuntu 24`, or another name you then enter as the template's `image` default.
    - Account / region: your vCenter.
    - Image: the template from 4.2.
+
+   ![Image mapping](images/vcfa-05-image-mapping-ubuntu.png)
+
 2. **Network tag.** Go to **Infrastructure > Resources > Networks**, open the network the VMs should use, and add
    the capability tag `net:salt` (or your own). The network must also be in a network profile for the cloud zone's
    region. A tag set on the network profile works as well.
+
+   ![Networks: select the network and click Tags](images/vcfa-06-networks.png)
+
 3. **IP addresses.** The template only sets IPs inside the guest:
    - If you will type a static IP into the request form, the network profile needs no IP range, and DHCP is not
      needed either.
@@ -208,16 +214,22 @@ Remove the temporary one, or give it a strong password, before you convert the V
    curl -fsSLO https://raw.githubusercontent.com/imtrinity94/lab-salt-console/main/vcfa/salt-node-ubuntu.yaml
    ```
 
-2. Go to **Design > Templates > New from > Upload**.
+2. Go to **Design > Templates** (the **Blueprints** page) and choose **New from > Upload**.
    - **Name**: e.g. `Salt Node - Ubuntu`, or your naming convention (in the author's lab, `LAB - Salt Node - Ubuntu`).
    - **Project**: your project.
    - **File**: `salt-node-ubuntu.yaml`.
+
+   ![New from > Upload](images/vcfa-02-new-from-upload.png)
+
 3. Open the template and change the two defaults marked `CHANGE`:
    - `image`: your image mapping's name.
    - `networkTag`: your network's capability tag.
 
    Other defaults you may want to set: DNS servers, DNS domain, gateway, prefix length, NTP servers and the Salt
    version.
+
+   ![The imported template](images/vcfa-03-template-canvas.png)
+
 4. Click **Test** and enter a VM name and an OS password. The test should end with **Successful**. If it reports
    *No matching image* or *No matching network*, the image mapping name or network tag doesn't match.
 5. Click **Version**, enter `1.0.0`, tick **Release this version to the catalog**, and click **Create**.
@@ -227,7 +239,10 @@ Remove the temporary one, or give it a strong password, before you convert the V
 1. Go to **Content & Policies > Content Sources > New > Template**. Choose the project, click **Validate**, then
    **Create & Import**. If the project already has a template content source, just open it and click **Save &
    Import** so it picks up the new template.
-2. Go to **Content & Policies > Policies > New Policy > Content Sharing Policy**. Scope it to the project, add the
+
+   ![Content sources](images/vcfa-07-content-sources.png)
+
+2. Go to **Content & Policies > Policies > Definitions > New Policy > Content Sharing Policy**. Scope it to the project, add the
    content source (or only this template), and add the users or groups who may request it. Skip this if a sharing
    policy already covers the content source.
 3. **Catalog** now shows **Salt Node - Ubuntu**.
@@ -235,6 +250,8 @@ Remove the temporary one, or give it a strong password, before you convert the V
 ### 4.6 Request the master
 
 In the **Catalog**, request **Salt Node - Ubuntu** with these inputs:
+
+![Request form](images/vcfa-09-request-form.png)
 
 | Input | Value for the master |
 |---|---|
@@ -250,8 +267,11 @@ In the **Catalog**, request **Salt Node - Ubuntu** with these inputs:
 | Console user / password | the console login (default user `saltapi`). Leave the password empty to have one generated. |
 | Console version | `main`, or a release tag such as `v1.4.1` |
 
-The deployment completes in VCF Automation as soon as the VM is up. Salt and the console then take another 3 to 6
-minutes inside the guest.
+The deployment completes in VCF Automation as soon as the VM is up. Salt and the console then take another 2 to 6
+minutes inside the guest (about a minute and a half in the author's lab). The deployment's **Overview** tab shows
+the console address:
+
+![Deployment overview](images/vcfa-10-deployment.png)
 
 ### 4.7 Follow the install
 
@@ -591,6 +611,7 @@ tools/release.sh           release: version, script tags, changelog, checks, com
 test/smoke.js              renders every page outside a browser, on sample data and against the live master
 test/api_test.py           checks the console service end to end and removes everything it creates
 docs/                      this guide and its screenshots
+vcfa/salt-node-ubuntu.yaml VCF Automation / Aria Automation cloud template (section 4)
 master-lab.conf            Salt master settings used by the install
 CHANGELOG.md               every release, newest first
 ```
